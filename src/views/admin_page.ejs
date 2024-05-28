@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <!-- Add CSS links here -->
+    <style>
+        body{
+         font-family: 'Rethink Sans', sans-serif;
+         background: #F7F9F9;
+         }
+         .admin--container{
+         background: white;
+         width: 90vw;
+         margin: 0 auto;
+         box-shadow:
+         0px 1.8px 3.6px rgba(0, 0, 0, 0.017),
+         0px 5px 10px rgba(0, 0, 0, 0.025),
+         0px 12.1px 24.1px rgba(0, 0, 0, 0.033),
+         0px 40px 80px rgba(0, 0, 0, 0.05)
+         ;
+         border-radius:15px;
+         margin-top:50px;
+         padding: 30px;
+         box-sizing: border-box;
+         }
+         h2{
+         color: #bc4749;
+         margin-bottom:60px;
+         }
+         .header{
+         display: flex;
+         width:100%;
+         justify-content: space-between;
+         align-items:center;
+         }
+         #logoutButton{
+         background: #bc4749;
+         color:white;
+         padding:10px;
+         font-size:14px;
+         font-weight:500;
+         border: none;
+         }
+         h3{
+         color: #566573
+         }
+         section{
+         border-bottom:1px solid rgba(0,0,0,0.2);
+         padding-bottom:30px;
+         margin-bottom:30px;
+         }
+         section:last-child{
+         margin-bottom:none;
+         border:none;
+         }
+         input{
+         box-sizing: border-box;
+         border-radius: 5px;
+         padding:10px;
+         border: 1px solid #D5D8DC;
+         outline:none;
+         }
+         button{
+         background: #bc4749;
+         color:white;
+         padding:10px 20px;
+         font-size:14px;
+         font-weight:500;
+         margin-bottom:0;
+         border: none;
+         }
+         able{
+         border-collapse: collapse;
+         width:100%;
+         }
+         table th {
+         padding: 12px;
+         text-align: left;
+         color: #bc4749;
+         }
+         table tr:nth-child(even){
+         background-color: #f2f2f2;
+         }
+         table button{
+         background:transparent;
+         color: #bc4749
+         }
+     </style>
+</head>
+<body>
+    
+    <button id="logoutButton" onclick="logout()">Logout</button>
+    <h1>Admin Dashboard</h1>
+
+    <!-- Report Resolution Form -->
+ 
+    <section>
+        <h2>Reports Pending:</h2>
+        </form>
+        <% if (reportData && reportData.length > 0) { %>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Reported By</th>
+                        <th>Reported ID</th>
+                        <th>Description</th>
+                        <th>Report Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% reportData.forEach(function(report) { %>
+                        <tr>
+                            <td><%= report._ID %></td>
+                            <td><%= report.reported_by %></td>
+                            <td><%= report.reported_id %></td>
+                            <td><%= report.description %></td>
+                            <td><%= report.report_type %></td>
+                            <td>
+                                <!-- Resolve Button -->
+                                <form>
+                                    <input type="hidden" name="_ID" value="<%= report._ID %>">
+                                    <button type="button" onclick="resolve('<%= report._ID %>')">Resolve</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <p>No reports found.</p>
+        <% } %>
+    </section>
+    
+    <!-- Review Deletion Form -->
+    <section>
+        <h2>Delete Review</h2>
+        <form>
+            <input type="text" name="_ID" id="reviewID" placeholder="Enter Review ID" required>
+            <button type="button" onclick="deletereview()">Delete Review</button>
+        </form>
+    </section>
+
+    
+
+    <!-- User Deletion Form -->
+    <section>
+        <h2>Delete User</h2>
+        <form>
+            <input type="text" name="_ID" id="userID" placeholder="Enter User ID" required>
+            <button type="button" onclick="deleteuser()">Delete User</button>
+        </form>
+    </section>
+
+    <!-- Listing Deletion Form -->
+    <section>
+        <h2>Delete Car Listing</h2>
+        <form>
+            <input type="text" name="_ID" id="listingID" placeholder="Enter Listing ID" required>
+            <button type="button" onclick="deletelisting()">Delete Listing</button>
+        </form>
+    </section>
+
+    <!-- Add JavaScript here if necessary -->
+
+</body>
+<script>
+    function logout() {
+        fetch('/login/logout', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+            
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error); // or display the error message in the UI
+            } else {
+                alert('Logout Successful');
+                window.location.href = "http://localhost:3000"
+                // Additional logic after successful deletion (like redirecting)
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+    function deletelisting() {
+        var reviewId = document.getElementById('listingID').value;
+        var data = {
+            _ID: reviewId
+        };
+        fetch('http://localhost:3000/admin/deletelisting', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error); 
+            } else {
+                alert('Successfully Deleted');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+    function resolve(reportid){
+        var data = {
+            _ID: reportid
+        };
+        fetch('http://localhost:3000/admin/resolvereport', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error); 
+            } else {
+                alert('Successfully Resolved');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+    function deletereview() {
+        var reviewId = document.getElementById('reviewID').value;
+        var data = {
+            _ID: reviewId
+        };
+        fetch('http://localhost:3000/admin/deletereview', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error); 
+            } else {
+                alert('Successfully Deleted');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+    function deleteuser() {
+        var user_id = document.getElementById('userID').value;
+        console.log(user_id);
+        var data = {
+            _ID: user_id
+        };
+        fetch('http://localhost:3000/admin/deleteuser', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error); 
+            } else {
+                alert('User Successfully Deleted');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+</script>
+</html>
