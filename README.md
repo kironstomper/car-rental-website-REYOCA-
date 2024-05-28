@@ -35,7 +35,7 @@ To get started with REYOCA, follow these steps:
 1. **Clone the Repository:** Clone the project repository to your local machine.
 
    ```bash
-   git clone https://github.com/SoftwareG4/reyoka.git
+   git clone https://github.com/kironstomper/car-rental-website-REYOCA-.git
    ```
 
 2. **Set Up Dependencies:** Ensure you have the necessary dependencies installed, including a web server and database server.
