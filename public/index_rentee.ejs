@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Car Rental</title>
+    <!-- Bootstrap CSS link -->
+    <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> -->
+    <!-- Custom CSS link -->
+    <!-- <link rel="stylesheet" type="text/css" href="./public/styles.css"> -->
+    <style>
+        body {
+            padding-top: 20px;
+        }
+    
+        .navbar {
+            margin-bottom: 20px;
+        }
+    
+        .jumbotron {
+            background-image: url('background.jpg');
+            background-size: cover;
+            color: white;
+            padding: 150px 0;
+        }
+    
+        .card {
+            border: none;
+        }
+    
+        .card-title {
+            font-size: 1.25rem;
+        }
+
+        footer {
+            padding: 20px 0;
+            background-color: #333;
+            color: white;
+        }
+
+        #rec-list {
+            display: flex;
+            height: 20vh;
+            padding-top: 7.5vh;
+        }
+
+        .car {
+            display: flex;
+            width: 600px;
+            margin: 20px;
+            border: 1px solid #ccc;
+        }
+
+        .car img {
+            width: 200px;
+            height: auto;
+        }
+
+        .car-info {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: left;
+            flex-grow: 1;
+        }
+
+        .car-info h2,
+        .car-info p {
+            margin: 0;
+        }
+
+        .car:hover {
+            border-style: solid;
+            border-width: 5px;
+            margin-top: 12px;
+            margin-bottom: 12px;
+        }
+    </style>
+    <!-- Places API -->
+    <script>
+        window.onload = function () {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition);
+            } else { 
+                alert("Geo-location not supported by browser");
+            }
+
+            const currentDate = new Date();
+            const formattedCurrentDate = currentDate.toISOString().slice(0, 16);
+
+            const startDateInput = document.getElementById('start_date');
+            startDateInput.value = formattedCurrentDate;
+            startDateInput.min = formattedCurrentDate;
+
+            updateEndDateLimit();
+        }
+        async function showPosition (position) {
+            let lat = position.coords.latitude;
+            let lng = position.coords.longitude;
+
+            let user_loc = [lat, lng];
+            let data = {"userLocation": user_loc};
+            console.log("User Location: ", user_loc);
+            const response = await fetch('/recommendations', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            });
+            console.log(response);
+            if (response.status == 200) {
+                console.log("Success");
+            }
+            response.json()
+            .then((resp) => {
+                data = resp.response;
+                console.log("data", data);
+
+                let list = document.getElementById("rec-list");
+                let carList = '<h1>Recommendations:</h1><br>';
+
+                if(data.length != 0) {
+                    for (item in data) {
+                        let imageUrl = (data[item]["image"] != null) ? data[item]["image"] : 'https://www.coloringpages101.com/coloring-pages/Cartoon-Movies/Cars/Lightning-McQueen-coloring-page.png';
+                        console.log(`added car ${item}`, data[item]["_ID"]);
+                        carList += addCar(imageUrl, data[item]["make"] + " " + data[item]["model"], data[item]["rating"], data[item]["address"], data[item]["travelDist"], data[item]["price"], data[item]["_ID"]);   
+                    };
+                } else {
+                    carList = '<h1>No Recommendations Available!!</h1>'
+                }
+                list.innerHTML = carList;
+            })
+        }
+        function showError(error) {
+            alert("Unable to fetch user location");
+        }
+
+        let autocomplete;
+        function initSearch() {
+            autocomplete = new google.maps.places.Autocomplete(
+                document.getElementById('location'),
+                {
+                    types: ['locality'],
+                    componentRestrictions: {'country': ['US']},
+                    fields: ['place_id', 'geometry', 'name']
+                }
+            );
+        }
+
+        function selected(event) {
+            console.log("selected");
+            const element = event.currentTarget;
+            let data = element.dataset.objectData;
+            data = JSON.parse(data);
+
+            // Use the data as needed (for example, log to console)
+            console.log("Element Data: ", data);
+            localStorage.setItem("lastSelectedVehicleID", data.vehicleID);
+            window.location.href = "http://localhost:3000/customize";
+        }
+
+        async function submitForm() {
+            if (!autocomplete) {
+                console.log("Some error occurred");
+            }
+            let placeSelected = autocomplete.getPlace();
+            if (!placeSelected.geometry) {
+                document.getElementById('location').placeholder = "Please select a location";
+                alert("Please select a location before searching." );
+            } else {
+                let lat = placeSelected.geometry.location.lat();
+                let lng = placeSelected.geometry.location.lng();
+                
+                let user_loc = [lat, lng];
+                let locationStr = document.getElementById('location').value;
+                let start_date = document.getElementById('start_date').value;
+                let end_date = document.getElementById('end_date').value;
+
+                let data = {
+                    "userLocation": user_loc,
+                    "startDate": start_date,
+                    "endDate": end_date,
+                    "userLocationStr": locationStr
+                };
+
+                localStorage.setItem('lastSearchQuery', JSON.stringify(data));
+
+                console.log("redirecting");
+                var targetUrl = 'http://localhost:3000/views/search';
+                redirectToAnotherUrl(targetUrl, data);
+            }
+        }
+
+        function redirectToAnotherUrl(url, jsonData) {
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = url;
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'jsonData';
+        input.value = JSON.stringify(jsonData);
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function addCar(image, title, rating, address, distance, price, vehicleID) {
+        if (rating == null) {
+            rating = '-';
+        }
+        address = address.split(',');
+        let streetAddress = address[1] + ", " + address[2];
+        var htmlStr = `<article class="car" data-object-data='{"vehicleID": ${vehicleID}}' onclick="selected(event)">
+            <img src=${image} alt="">
+            <div class="car-info">
+                <h2>${title}</h2>
+                <p>${rating} &#9733;</p>
+                <p>${streetAddress} <b>(${distance} mi)</b></p>
+                <p class="price"><b>Price: </b>$${price}/day</p>
+            </div>
+        </article>`;
+        return htmlStr;
+    }
+
+    function updateEndDateLimit() {
+            const startDateInput = document.getElementById('start_date');
+            const startDateValue = startDateInput.value;
+
+            const endDateInput = document.getElementById('end_date');
+            endDateInput.min = startDateValue;
+        }
+    </script>
+</head>
+
+<body class="bg-light">
+    <header>
+        <style>
+            ul {
+                list-style-type: none;
+            }
+            li a {
+                display: block;
+                float: left;
+                padding-left: 16px;
+            }
+        </style>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <a class="navbar-brand" href="#">RentYourCar(REYOCA)</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <!-- <li class="nav-item">
+                        <a class="nav-link" href="#">Notifications</a>
+                    </li> -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="/views/message">Customer Support</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Cart</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dev_page_route/profilepage">Profile</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        <br>
+    </header>
+    <main role="main">
+        <!-- <section class="jumbotron text-center">
+            <div class="container">
+                <h1 class="display-4">Rent the Perfect Car</h1>
+                <p class="lead">Find the best cars for your next adventure.</p>
+                <a href="#" class="btn btn-primary">Get Started</a>
+            </div>
+        </section> -->
+
+        <div class="container">
+            <div class="row">
+                <div class="col-md">
+                    <div class="card mb-4 box-shadow">
+                        <form style="padding-top: 8px;">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" name="location">
+                            <label for="start_date">From</label>
+                            <input type="datetime-local" id="start_date" name="start_date"  onchange="updateEndDateLimit()">
+                            <label for="end_date">Until</label>
+                            <input type="datetime-local" id="end_date" name="end_date">
+                            <button type="button" value="Search" onclick="submitForm()">Search</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="rec-list">
+            
+        </div>
+        
+    </main>
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <!-- <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script> -->
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAlxjdoI_JGnoGMDcZzuz-mBKVNnZqODmA&libraries=places&callback=initSearch">
+    </script>
+</body>
+
+</html>
